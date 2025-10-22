@@ -1,6 +1,6 @@
 package com.example.MovieFlix.controller;
 
-import com.example.MovieFlix.model.ApiResponse;
+import com.example.MovieFlix.model.entities.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +44,6 @@ public class HealthController {
 
     @GetMapping("/ping")
     public ResponseEntity<ApiResponse<String>> ping() {
-        return ResponseEntity.ok(ApiResponse.success("pong"));
+        return ResponseEntity.ok(ApiResponse.success("Ping successful", "pong"));
     }
 }

@@ -4,6 +4,27 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+  # Database Configuration
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/movieflix}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000 # 24 hours in milliseconds
+
 # Server configuration
 server:
   port: ${SERVER_PORT:8080}
@@ -16,6 +37,7 @@ logging:
   level:
     root: INFO
     com.example.MovieFlix: DEBUG
+    org.hibernate.SQL: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 

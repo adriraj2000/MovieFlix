@@ -3,7 +3,7 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
 
   devtools:
     restart:
@@ -12,7 +12,7 @@ spring:
 logging:
   level:
     root: INFO
-    com.movieflix: DEBUG
+    com.example.MovieFlix: DEBUG
     org.springframework: INFO
     org.hibernate.SQL: DEBUG
 
