@@ -23,11 +23,11 @@ MovieFlix (Single Spring Boot Application)
 ### Backend
 
 - **Spring Boot 3.5.6** - Main framework
-- **Spring AI** - OpenAI GPT-4 integration
+- **Spring AI (1.0.0-M3)** - OpenAI GPT-4 integration for vibe analysis
 - **Spring Security** - JWT authentication
 - **Spring Data JPA** - Database ORM
 - **MySQL 8.0** - Primary database
-- **Redis** - Caching layer
+- **WebClient** - Reactive HTTP client for external APIs
 
 ### Frontend (Coming Soon)
 
@@ -50,8 +50,8 @@ MovieFlix (Single Spring Boot Application)
 
 ## 🔑 API Keys Required
 
-1. **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/) (Phase 5)
-2. **OMDB API Key**: Get free key from [OMDB API](http://www.omdbapi.com/apikey.aspx) (Phase 3)
+1. **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/) - Required for AI-powered vibe analysis
+2. **OMDB API Key**: Get free key from [OMDB API](http://www.omdbapi.com/apikey.aspx) - Required for movie metadata
 
 ## ⚙️ Setup Instructions
 
@@ -61,13 +61,17 @@ MovieFlix (Single Spring Boot Application)
 SPRING_PROFILES_ACTIVE=dev
 SERVER_PORT=8080
 
-# Add your actual API keys here
+# API Keys (Required)
 OPENAI_API_KEY=sk-your-actual-openai-key
 OMDB_API_KEY=your-actual-omdb-key
-JWT_SECRET=your-secure-random-secret
 
-# Database (when you need it in Phase 2+)
-MYSQL_PASSWORD=your-mysql-password
+# Security
+JWT_SECRET=your-secure-random-64-character-secret-key-here
+
+# Database
+MYSQL_URL=jdbc:mysql://localhost:3306/movieflix?createDatabaseIfNotExist=true
+MYSQL_USERNAME=root
+MYSQL_PASSWORD=password
 ```
 
 ### 2. Option 1: Docker (Recommended)
@@ -146,79 +150,157 @@ mvn spring-boot:run
 ```
 MovieFlix/
 ├── src/main/java/com/example/MovieFlix/
-│   ├── MovieFlixApplication.java  # Main Spring Boot application
-│   ├── controller/                # REST API controllers
-│   │   └── HealthController.java
-│   ├── service/                   # Business services
-│   │   # (Auth, Movie, Metadata, Recommendation services)
-│   ├── repository/                # Data access repositories
-│   │   # (JPA repositories)
-│   ├── model/                     # Domain models & DTOs
-│   │   └── ApiResponse.java
-│   ├── config/                    # Spring configurations
-│   │   ├── CorsConfig.java
-│   │   └── RedisConfig.java
-│   ├── security/                  # Security & JWT
-│   │   └── SecurityConfig.java
-│   └── exception/                 # Exception handling
+│   ├── MovieFlixApplication.java     # Main Spring Boot application
+│   ├── controller/                   # REST API controllers
+│   │   ├── AuthController.java       # Authentication endpoints
+│   │   ├── HealthController.java     # Health check
+│   │   ├── MovieController.java      # Movie search & details
+│   │   └── RecommendationController.java  # AI recommendations
+│   ├── service/                      # Business services
+│   │   ├── AuthService.java          # Authentication logic
+│   │   ├── OmdbService.java          # OMDB API client
+│   │   ├── MovieVibeService.java     # AI vibe analysis
+│   │   └── MovieRecommendationService.java  # AI recommendations
+│   ├── repository/                   # Data access repositories
+│   │   └── UserRepository.java       # User data access
+│   ├── model/                        # Domain models & DTOs
+│   │   ├── entities/                 # JPA entities
+│   │   │   ├── User.java             # User entity
+│   │   │   └── ApiResponse.java      # Response wrapper
+│   │   └── dto/                      # Data Transfer Objects
+│   │       ├── auth/                 # Auth DTOs
+│   │       ├── omdb/                 # OMDB API DTOs
+│   │       ├── MovieVibeResponse.java
+│   │       ├── RecommendedMovie.java
+│   │       └── RecommendationResponse.java
+│   ├── config/                       # Spring configurations
+│   │   ├── SecurityConfig.java       # Security & authentication
+│   │   └── WebClientConfig.java      # WebClient for APIs
+│   ├── common/                       # Common utilities
+│   │   └── JwtUtil.java              # JWT token utilities
+│   └── exception/                    # Exception handling
 │       ├── GlobalExceptionHandler.java
 │       └── ResourceNotFoundException.java
 ├── src/main/resources/
-│   ├── application.yml            # Main configuration
-│   ├── application-dev.yml        # Dev profile
-│   ├── application-prod.yml       # Prod profile
-│   └── db/migration/              # Flyway migrations
-├── docker-compose.yml             # Docker services
-├── Dockerfile                     # Application container
-├── pom.xml                        # Maven dependencies
-└── README.md                      # This file
+│   ├── application.yml               # Main configuration
+│   └── application-dev.yml           # Dev profile
+├── .env                              # Environment variables (git-ignored)
+├── docker-compose.yml                # Docker services
+├── Dockerfile                        # Application container
+├── pom.xml                           # Maven dependencies
+└── README.md                         # This file
 ```
 
-## 🔌 API Endpoints (Coming in Next Phases)
+## 🔌 API Endpoints
+
+### Health Check
+
+```
+GET    /api/health/ping          - Simple health check
+GET    /actuator/health          - Detailed health status
+```
 
 ### Authentication
 
 ```
-POST   /api/auth/register    - Register new user
-POST   /api/auth/login       - Login and get JWT token
-POST   /api/auth/refresh     - Refresh JWT token
-GET    /api/auth/me          - Get current user info
+POST   /api/auth/register        - Register new user
+POST   /api/auth/login           - Login and get JWT token
 ```
 
 ### Movies & Search
 
 ```
-GET    /api/movies/search?q={query}   - Search movies
-GET    /api/movies/{imdbId}           - Get movie details
+GET    /api/movies/search?s={query}&page={page}  - Search movies
+GET    /api/movies/{title}?year={year}           - Get movie details by title
 ```
 
-### Recommendations
+### AI-Powered Recommendations (Phase 4 ✅)
 
 ```
-POST   /api/recommendations           - Get personalized recommendations
-GET    /api/recommendations/history   - Get recommendation history
-POST   /api/chat                      - Natural language movie chat
+GET    /api/recommendations/{title}              - Get vibe analysis + recommendations
+GET    /api/recommendations/{title}?year={year}  - Get recommendations with year disambiguation
+GET    /api/recommendations/vibe/{title}         - Analyze movie vibe only (no recommendations)
 ```
 
-### User Preferences
+**Example Usage:**
 
+```bash
+# Get full recommendations for Inception
+curl "http://localhost:8080/api/recommendations/Inception"
+
+# Disambiguate by year (e.g., Dune 2021 vs 1984)
+curl "http://localhost:8080/api/recommendations/Dune?year=2021"
+
+# Just analyze the vibe without recommendations
+curl "http://localhost:8080/api/recommendations/vibe/The%20Dark%20Knight"
 ```
-GET    /api/users/preferences         - Get user preferences
-POST   /api/users/preferences         - Update preferences
-GET    /api/users/favorites           - Get favorites
-POST   /api/users/favorites           - Add to favorites
-GET    /api/users/watchlist           - Get watchlist
-POST   /api/users/watchlist           - Add to watchlist
+
+**Sample Response:**
+
+```json
+{
+  "vibe": {
+    "title": "Inception",
+    "year": "2010",
+    "vibe": "Mind-bending thriller",
+    "themes": ["reality", "dreams", "identity", "time"],
+    "moods": ["suspenseful", "cerebral", "intense"],
+    "reasoning": "The film creates a complex emotional atmosphere..."
+  },
+  "recommendations": [
+    {
+      "title": "The Matrix",
+      "year": "1999",
+      "reason": "Shares the exploration of layered realities..."
+    },
+    {
+      "title": "Memento",
+      "year": "2000",
+      "reason": "Similar non-linear narrative structure..."
+    }
+  ]
+}
 ```
 
 ## 🧪 Testing
+
+### Unit Tests
 
 ```bash
 # Run all tests
 mvn test
 
-# Run with coverage
-mvn test jacoco:report
+# Skip tests during build
+mvn clean install -DskipTests
+```
+
+### API Testing (Phase 4)
+
+```bash
+# Health check
+curl http://localhost:8080/api/health/ping
+
+# Register user
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","email":"test@example.com","password":"password123"}'
+
+# Login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"password123"}'
+
+# Search movies
+curl "http://localhost:8080/api/movies/search?s=inception&page=1"
+
+# Get movie details
+curl "http://localhost:8080/api/movies/Inception?year=2010"
+
+# Get AI recommendations (Phase 4)
+curl "http://localhost:8080/api/recommendations/Inception"
+
+# Analyze vibe only
+curl "http://localhost:8080/api/recommendations/vibe/The%20Dark%20Knight"
 ```
 
 ## 🔧 Development
@@ -258,15 +340,13 @@ Using Flyway for version-controlled database changes:
 | Variable                 | Description               | Default                               | Required |
 | ------------------------ | ------------------------- | ------------------------------------- | -------- |
 | `SPRING_PROFILES_ACTIVE` | Active profile (dev/prod) | dev                                   | No       |
+| `SERVER_PORT`            | Server port               | 8080                                  | No       |
 | `MYSQL_URL`              | MySQL JDBC URL            | jdbc:mysql://localhost:3306/movieflix | Yes      |
 | `MYSQL_USERNAME`         | MySQL username            | root                                  | Yes      |
-| `MYSQL_PASSWORD`         | MySQL password            | password                              | Yes      |
-| `REDIS_HOST`             | Redis host                | localhost                             | Yes      |
-| `REDIS_PORT`             | Redis port                | 6379                                  | Yes      |
+| `MYSQL_PASSWORD`         | MySQL password            | -                                     | Yes      |
 | `OPENAI_API_KEY`         | OpenAI API key            | -                                     | Yes      |
 | `OMDB_API_KEY`           | OMDB API key              | -                                     | Yes      |
 | `JWT_SECRET`             | JWT signing secret        | -                                     | Yes      |
-| `CORS_ALLOWED_ORIGINS`   | CORS origins              | http://localhost:3000                 | No       |
 
 ## 📈 Monitoring
 
@@ -305,14 +385,20 @@ docker exec -it movieflix-mysql mysql -u root -p
 
 # Verify database exists
 SHOW DATABASES;
+
+# Use the movieflix database
+USE movieflix;
+
+# Show tables
+SHOW TABLES;
 ```
 
-### Redis connection issues
+### OpenAI API issues
 
-```bash
-# Check Redis is accessible
-docker exec -it movieflix-redis redis-cli ping
-```
+1. Verify your API key is valid and has credits
+2. Check the API key format (should start with `sk-`)
+3. Ensure the key is properly set in `.env` file
+4. Restart the application after changing environment variables
 
 ## 📝 Development Phases
 
@@ -342,19 +428,21 @@ docker exec -it movieflix-redis redis-cli ping
   - [x] WebClient configuration
   - [x] Integration testing
 
-- [ ] **Phase 4**: Core Movie Service
+- [x] **Phase 4**: AI-Powered Vibe Analysis & Recommendations
 
-  - [ ] Database schema
-  - [ ] User preferences
-  - [ ] Watch history
+  - [x] Spring AI OpenAI integration
+  - [x] Vibe analysis service using GPT-4
+  - [x] AI recommendation engine
+  - [x] Recommendation controller with REST endpoints
+  - [x] Simple, focused architecture (no user tracking)
 
-- [ ] **Phase 5**: AI Recommendation Service
+- [ ] **Phase 5**: Enhanced AI Features
 
-  - [ ] Spring AI integration
-  - [ ] Recommendation engine
-  - [ ] Embeddings
+  - [ ] Conversation history & context
+  - [ ] Vector embeddings for semantic search
+  - [ ] Multi-turn recommendation dialogues
 
-- [ ] **Phase 6**: Agent Orchestration
+- [ ] **Phase 6**: Agent Orchestration (MCP)
 
   - [ ] Natural language processing
   - [ ] Tool definitions
@@ -381,4 +469,4 @@ docker exec -it movieflix-redis redis-cli ping
 
 ---
 
-**Status**: Phase 3 - Metadata Service Complete ✅ | Ready for Phase 4 - Core Movie Service 🚀
+**Status**: Phase 4 - AI-Powered Vibe Recommendations Complete ✅ | Ready for Testing 🚀

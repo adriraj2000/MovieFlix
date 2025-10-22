@@ -20,6 +20,15 @@ spring:
       hibernate:
         format_sql: true
 
+  # OpenAI Configuration
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4
+          temperature: 0.7
+
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET}
