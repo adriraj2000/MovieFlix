@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: MovieFlix
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+# Server configuration
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.example.MovieFlix: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
