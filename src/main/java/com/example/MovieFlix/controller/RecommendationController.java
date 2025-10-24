@@ -1,82 +1,69 @@
 package com.example.MovieFlix.controller;
 
-import com.example.MovieFlix.model.dto.MovieVibeResponse;
 import com.example.MovieFlix.model.dto.RecommendationResponse;
 import com.example.MovieFlix.model.dto.RecommendedMovie;
 import com.example.MovieFlix.model.dto.omdb.MovieDetailsResponse;
+import com.example.MovieFlix.service.AIRecommendationService;
 import com.example.MovieFlix.service.OmdbService;
-import com.example.MovieFlix.service.MovieRecommendationService;
-import com.example.MovieFlix.service.MovieVibeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * AI-powered movie recommendations based on vibe analysis
+ * Main recommendation controller - Single public endpoint
  */
 @RestController
-@RequestMapping("/api/recommendations")
+@RequestMapping("/api")
 public class RecommendationController {
 
     private static final Logger logger = LoggerFactory.getLogger(RecommendationController.class);
 
     private final OmdbService omdbService;
-    private final MovieVibeService movieVibeService;
-    private final MovieRecommendationService movieRecommendationService;
+    private final AIRecommendationService aiRecommendationService;
 
-    public RecommendationController(
-            OmdbService omdbService,
-            MovieVibeService movieVibeService,
-            MovieRecommendationService movieRecommendationService) {
+    public RecommendationController(OmdbService omdbService, AIRecommendationService aiRecommendationService) {
         this.omdbService = omdbService;
-        this.movieVibeService = movieVibeService;
-        this.movieRecommendationService = movieRecommendationService;
+        this.aiRecommendationService = aiRecommendationService;
     }
 
     /**
-     * Get vibe-based recommendations for a movie by title
-     *
-     * @param title Movie title
-     * @param year  Optional year for disambiguation
-     * @return Vibe analysis + recommendations
+     * Get AI-powered movie recommendations
+     * 
+     * Single endpoint that does everything:
+     * 1. Fetches movie metadata from OMDB API
+     * 2. Infers vibe from metadata using AI
+     * 3. Generates 5 similar movie recommendations based on vibe
+     * 
+     * Works immediately - no setup required!
      */
-    @GetMapping("/{title}")
+    @GetMapping("/recommendations")
     public ResponseEntity<RecommendationResponse> getRecommendations(
-            @PathVariable String title,
+            @RequestParam String title,
             @RequestParam(required = false) String year) {
-        logger.info("Get recommendations for title: {}, year: {}", title, year);
+        logger.info("Get recommendations for: title='{}', year='{}'", title, year);
 
-        // 1. Get movie from OMDB
+        // Step 1: Get movie metadata from OMDB
         MovieDetailsResponse movie = omdbService.getMovieByTitle(title, year);
 
-        // 2. Analyze vibe with AI
-        MovieVibeResponse vibe = movieVibeService.analyzeVibe(movie);
+        // Step 2 & 3: Infer vibe and generate recommendations using AI
+        AIRecommendationService.AIRecommendationResult result = aiRecommendationService.getRecommendations(movie);
 
-        // 3. Get AI recommendations
-        List<RecommendedMovie> recommendations = movieRecommendationService.getRecommendations(vibe);
+        // Format response using proper DTOs
+        List<RecommendedMovie> recommendations = result.getRecommendations().stream()
+                .map(r -> new RecommendedMovie(r.getTitle(), r.getYear(), r.getReason()))
+                .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new RecommendationResponse(vibe, recommendations));
-    }
+        RecommendationResponse response = new RecommendationResponse(
+                movie.getTitle(),
+                movie.getYear(),
+                movie.getGenre(),
+                result.getVibe(),
+                recommendations);
 
-    /**
-     * Analyze vibe only (no recommendations)
-     *
-     * @param title Movie title
-     * @param year  Optional year for disambiguation
-     * @return Vibe analysis
-     */
-    @GetMapping("/vibe/{title}")
-    public ResponseEntity<MovieVibeResponse> analyzeVibe(
-            @PathVariable String title,
-            @RequestParam(required = false) String year) {
-        logger.info("Analyze vibe for title: {}", title);
-
-        MovieDetailsResponse movie = omdbService.getMovieByTitle(title, year);
-        MovieVibeResponse vibe = movieVibeService.analyzeVibe(movie);
-
-        return ResponseEntity.ok(vibe);
+        return ResponseEntity.ok(response);
     }
 }

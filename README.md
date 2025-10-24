@@ -23,10 +23,10 @@ MovieFlix (Single Spring Boot Application)
 ### Backend
 
 - **Spring Boot 3.5.6** - Main framework
-- **Spring AI (1.0.0-M3)** - OpenAI GPT-4 integration for vibe analysis
+- **Spring AI (1.0.0-M3)** - OpenAI GPT-4 integration
 - **Spring Security** - JWT authentication
 - **Spring Data JPA** - Database ORM
-- **MySQL 8.0** - Primary database
+- **MySQL 8.0** - User data storage
 - **WebClient** - Reactive HTTP client for external APIs
 
 ### Frontend (Coming Soon)
@@ -150,45 +150,40 @@ mvn spring-boot:run
 ```
 MovieFlix/
 ├── src/main/java/com/example/MovieFlix/
-│   ├── MovieFlixApplication.java     # Main Spring Boot application
-│   ├── controller/                   # REST API controllers
-│   │   ├── AuthController.java       # Authentication endpoints
-│   │   ├── HealthController.java     # Health check
-│   │   ├── MovieController.java      # Movie search & details
-│   │   └── RecommendationController.java  # AI recommendations
-│   ├── service/                      # Business services
-│   │   ├── AuthService.java          # Authentication logic
-│   │   ├── OmdbService.java          # OMDB API client
-│   │   ├── MovieVibeService.java     # AI vibe analysis
-│   │   └── MovieRecommendationService.java  # AI recommendations
-│   ├── repository/                   # Data access repositories
-│   │   └── UserRepository.java       # User data access
-│   ├── model/                        # Domain models & DTOs
-│   │   ├── entities/                 # JPA entities
-│   │   │   ├── User.java             # User entity
-│   │   │   └── ApiResponse.java      # Response wrapper
-│   │   └── dto/                      # Data Transfer Objects
-│   │       ├── auth/                 # Auth DTOs
-│   │       ├── omdb/                 # OMDB API DTOs
-│   │       ├── MovieVibeResponse.java
-│   │       ├── RecommendedMovie.java
-│   │       └── RecommendationResponse.java
-│   ├── config/                       # Spring configurations
-│   │   ├── SecurityConfig.java       # Security & authentication
-│   │   └── WebClientConfig.java      # WebClient for APIs
-│   ├── common/                       # Common utilities
-│   │   └── JwtUtil.java              # JWT token utilities
-│   └── exception/                    # Exception handling
+│   ├── MovieFlixApplication.java        # Main Spring Boot application
+│   ├── controller/                      # REST API controllers
+│   │   ├── AuthController.java          # Authentication endpoints
+│   │   ├── HealthController.java        # Health check
+│   │   └── RecommendationController.java # Main recommendation endpoint
+│   ├── service/                         # Business services
+│   │   ├── AuthService.java             # Authentication logic
+│   │   ├── OmdbService.java             # OMDB API client
+│   │   └── AIRecommendationService.java # AI-powered recommendations
+│   ├── repository/                      # Data access
+│   │   └── UserRepository.java          # User data access
+│   ├── model/                           # Domain models & DTOs
+│   │   ├── entities/                    # JPA entities
+│   │   │   ├── User.java                # User entity
+│   │   │   └── ApiResponse.java         # Response wrapper
+│   │   └── dto/                         # Data Transfer Objects
+│   │       ├── auth/                    # Auth DTOs
+│   │       └── omdb/                    # OMDB API DTOs
+│   ├── config/                          # Spring configurations
+│   │   ├── SecurityConfig.java          # Security configuration
+│   │   └── WebClientConfig.java         # WebClient for APIs
+│   ├── common/                          # Common utilities
+│   │   └── JwtUtil.java                 # JWT token utilities
+│   └── exception/                       # Exception handling
 │       ├── GlobalExceptionHandler.java
 │       └── ResourceNotFoundException.java
 ├── src/main/resources/
-│   ├── application.yml               # Main configuration
-│   └── application-dev.yml           # Dev profile
-├── .env                              # Environment variables (git-ignored)
-├── docker-compose.yml                # Docker services
-├── Dockerfile                        # Application container
-├── pom.xml                           # Maven dependencies
-└── README.md                         # This file
+│   ├── application.yml                  # Main configuration
+│   └── application-dev.yml              # Dev profile
+├── .env                                 # Environment variables (git-ignored)
+├── docker-compose.yml                   # Docker services
+├── Dockerfile                           # Application container
+├── pom.xml                              # Maven dependencies
+└── README.md                            # This file
 ```
 
 ## 🔌 API Endpoints
@@ -207,56 +202,53 @@ POST   /api/auth/register        - Register new user
 POST   /api/auth/login           - Login and get JWT token
 ```
 
-### Movies & Search
+### Movie Recommendations (Main Feature)
 
 ```
-GET    /api/movies/search?s={query}&page={page}  - Search movies
-GET    /api/movies/{title}?year={year}           - Get movie details by title
-```
-
-### AI-Powered Recommendations (Phase 4 ✅)
-
-```
-GET    /api/recommendations/{title}              - Get vibe analysis + recommendations
-GET    /api/recommendations/{title}?year={year}  - Get recommendations with year disambiguation
-GET    /api/recommendations/vibe/{title}         - Analyze movie vibe only (no recommendations)
+GET    /api/recommendations?title={title}&year={year}    - Get AI-powered recommendations
 ```
 
 **Example Usage:**
 
 ```bash
-# Get full recommendations for Inception
-curl "http://localhost:8080/api/recommendations/Inception"
+# Get recommendations for Inception
+curl "http://localhost:8080/api/recommendations?title=Inception"
 
-# Disambiguate by year (e.g., Dune 2021 vs 1984)
-curl "http://localhost:8080/api/recommendations/Dune?year=2021"
-
-# Just analyze the vibe without recommendations
-curl "http://localhost:8080/api/recommendations/vibe/The%20Dark%20Knight"
+# Get recommendations with year (for disambiguation)
+curl "http://localhost:8080/api/recommendations?title=Dune&year=2021"
 ```
 
-**Sample Response:**
+**How It Works (3 Steps):**
+
+1. **Step 1**: Fetch movie metadata from OMDB API
+2. **Step 2**: Infer emotional vibe from metadata using OpenAI (atmosphere, themes, tone)
+3. **Step 3**: Generate 5 similar movie recommendations based on the vibe
+
+✨ **No database, no setup, no configuration!** Works on first use.
+
+**Sample Response (Recommendations):**
 
 ```json
 {
-  "vibe": {
-    "title": "Inception",
-    "year": "2010",
-    "vibe": "Mind-bending thriller",
-    "themes": ["reality", "dreams", "identity", "time"],
-    "moods": ["suspenseful", "cerebral", "intense"],
-    "reasoning": "The film creates a complex emotional atmosphere..."
-  },
+  "sourceTitle": "Inception",
+  "sourceYear": "2010",
+  "sourceGenre": "Action, Sci-Fi, Thriller",
+  "vibe": "Inception is a mind-bending psychological thriller that explores the nature of reality through complex narrative layers. The film creates an intense, cerebral atmosphere with themes of memory, perception, and the subconscious. Its tone blends high-stakes action with philosophical depth.",
   "recommendations": [
     {
       "title": "The Matrix",
       "year": "1999",
-      "reason": "Shares the exploration of layered realities..."
+      "reason": "Like Inception, it questions the nature of reality and features a protagonist discovering hidden layers of existence."
     },
     {
       "title": "Memento",
       "year": "2000",
-      "reason": "Similar non-linear narrative structure..."
+      "reason": "Shares Inception's non-linear narrative structure and explores memory manipulation."
+    },
+    {
+      "title": "Shutter Island",
+      "year": "2010",
+      "reason": "Features a similar psychological thriller atmosphere with reality-questioning themes."
     }
   ]
 }
@@ -290,17 +282,11 @@ curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"testuser","password":"password123"}'
 
-# Search movies
-curl "http://localhost:8080/api/movies/search?s=inception&page=1"
+# Get AI recommendations (Phase 4 - works immediately!)
+curl "http://localhost:8080/api/recommendations?title=Inception"
 
-# Get movie details
-curl "http://localhost:8080/api/movies/Inception?year=2010"
-
-# Get AI recommendations (Phase 4)
-curl "http://localhost:8080/api/recommendations/Inception"
-
-# Analyze vibe only
-curl "http://localhost:8080/api/recommendations/vibe/The%20Dark%20Knight"
+# Get recommendations with year disambiguation
+curl "http://localhost:8080/api/recommendations?title=The%20Matrix&year=1999"
 ```
 
 ## 🔧 Development
@@ -321,18 +307,6 @@ mvn spring-boot:run
 
 ```bash
 docker build -t movieflix:latest .
-```
-
-## 📊 Database Migrations
-
-Using Flyway for version-controlled database changes:
-
-```bash
-# Migrations are located in: src/main/resources/db/migration/
-# Format: V{version}__{description}.sql
-# Example: V1__create_users_table.sql
-
-# Flyway runs automatically on application startup
 ```
 
 ## 🌐 Environment Variables
@@ -418,40 +392,32 @@ SHOW TABLES;
   - [x] Global exception handling
   - [x] MySQL database integration
 
-- [x] **Phase 3**: Metadata Service
+- [x] **Phase 3**: OMDB Integration
 
-  - [x] OMDB API client integration
-  - [x] Movie search functionality
-  - [x] Movie details retrieval
+  - [x] OMDB API client
+  - [x] Movie metadata fetching
   - [x] Error handling for external API
   - [x] Response DTOs
   - [x] WebClient configuration
-  - [x] Integration testing
 
-- [x] **Phase 4**: AI-Powered Vibe Analysis & Recommendations
+- [x] **Phase 4**: AI-Powered Movie Recommendations
 
-  - [x] Spring AI OpenAI integration
-  - [x] Vibe analysis service using GPT-4
-  - [x] AI recommendation engine
-  - [x] Recommendation controller with REST endpoints
-  - [x] Simple, focused architecture (no user tracking)
+  - [x] OpenAI chat integration (GPT-4)
+  - [x] Vibe inference from metadata
+  - [x] Recommendation generation
+  - [x] Zero-setup architecture (works immediately)
+  - [x] Single public endpoint
 
-- [ ] **Phase 5**: Enhanced AI Features
+- [ ] **Phase 5**: Frontend Development
 
-  - [ ] Conversation history & context
-  - [ ] Vector embeddings for semantic search
-  - [ ] Multi-turn recommendation dialogues
+  - [ ] React setup with TypeScript
+  - [ ] Tailwind styling
+  - [ ] Component library
 
 - [ ] **Phase 6**: Agent Orchestration (MCP)
-
   - [ ] Natural language processing
   - [ ] Tool definitions
   - [ ] Context management
-
-- [ ] **Phase 7**: Frontend
-  - [ ] React setup
-  - [ ] Tailwind styling
-  - [ ] Component library
 
 ## 🤝 Contributing
 
@@ -469,4 +435,4 @@ SHOW TABLES;
 
 ---
 
-**Status**: Phase 4 - AI-Powered Vibe Recommendations Complete ✅ | Ready for Testing 🚀
+**Status**: Phase 4 Complete - AI-Powered Movie Recommendations ✅ | Ready for Testing 🚀

@@ -4,10 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 /**
- * Response containing movie vibe analysis
+ * Response containing movie metadata and vibe analysis
  */
 @Data
 @NoArgsConstructor
@@ -15,8 +13,6 @@ import java.util.List;
 public class MovieVibeResponse {
     private String title;
     private String year;
+    private String genre;
     private String vibe;
-    private List<String> themes;
-    private List<String> moods;
-    private String reasoning;
 }

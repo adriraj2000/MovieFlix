@@ -28,6 +28,9 @@ spring:
         options:
           model: gpt-4
           temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-3-small
 
 # JWT Configuration
 jwt:
